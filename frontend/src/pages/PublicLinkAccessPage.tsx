@@ -141,18 +141,7 @@ const PublicLinkAccessPage = () => {
 
             // Download file from backend
             const response = await axios.get(
-                `${API_URL}/share/${token}/download${password ? `?password=${encodeURIComponent(password)}` : ''}`,
-                {
-                    responseType: 'blob',
-                    onDownloadProgress: (progressEvent) => {
-                        if (progressEvent.total) {
-                            const percentCompleted = Math.round(
-                                ((progressEvent.loaded * 70) / progressEvent.total) + 30
-                            );
-                            setDownloadProgress(percentCompleted);
-                        }
-                    },
-                }
+                `${API_URL}/share/${token}/download${password ? `?password=${encodeURIComponent(password)}` : ''}`
             );
 
             if (response.data.downloadUrl) {
