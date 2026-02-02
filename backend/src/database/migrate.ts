@@ -14,10 +14,13 @@ async function runMigrations() {
         await db.query(schema);
 
         console.log('✅ Database migrations completed successfully');
-        process.exit(0);
+
+        // Close the database connection
+        await db.disconnect();
     } catch (error) {
         console.error('❌ Migration failed:', error);
-        process.exit(1);
+        await db.disconnect();
+        throw error; // Let the calling process handle the error
     }
 }
 
