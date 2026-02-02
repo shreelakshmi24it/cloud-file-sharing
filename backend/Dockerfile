@@ -15,6 +15,9 @@ COPY . .
 # Build TypeScript
 RUN npm run build
 
+# Copy SQL files (TypeScript doesn't copy these)
+RUN cp -r src/database/*.sql dist/database/ || true
+
 # Production image
 FROM node:20-alpine
 
