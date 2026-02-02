@@ -31,7 +31,17 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
 
 // Compression middleware
-app.use(compression());
+app.use(compression({
+    filter: (req, res) => {
+        if (req.headers['x-no-compression']) {
+            return false;
+        }
+        if (req.path.includes('/download')) {
+            return false;
+        }
+        return compression.filter(req, res);
+    }
+}));
 
 // Logging middleware
 if (config.env === 'development') {
