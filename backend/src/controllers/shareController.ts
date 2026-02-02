@@ -193,14 +193,6 @@ export async function downloadSharedFile(req: Request, res: Response): Promise<v
         }
 
 
-
-        // Set headers for download
-        res.setHeader('Content-Type', file.mime_type);
-        res.setHeader('Content-Disposition', `attachment; filename="${file.original_name}"`);
-        res.setHeader('Content-Length', file.size);
-
-
-
         if (isS3Storage && s3Client) {
             // Download from S3
             try {
@@ -211,10 +203,22 @@ export async function downloadSharedFile(req: Request, res: Response): Promise<v
 
                 const response = await s3Client.send(command);
 
+                // Set headers based on S3 response
+                res.setHeader('Content-Type', file.mime_type);
+                res.setHeader('Content-Disposition', `attachment; filename="${file.original_name}"`);
+
+                if (response.ContentLength) {
+                    res.setHeader('Content-Length', response.ContentLength);
+                }
+
                 if (response.Body instanceof Readable) {
-                    response.Body.pipe(res);
+                    response.Body.pipe(res).on('error', (err) => {
+                        console.error('Stream piping error:', err);
+                    });
                 } else if (response.Body) {
-                    (response.Body as any).pipe(res);
+                    (response.Body as any).pipe(res).on('error', (err: any) => {
+                        console.error('Stream piping error (any):', err);
+                    });
                 } else {
                     throw new Error('Empty response body from S3');
                 }
@@ -230,6 +234,10 @@ export async function downloadSharedFile(req: Request, res: Response): Promise<v
                 res.status(404).json({ error: 'File not found on storage' });
                 return;
             }
+
+            res.setHeader('Content-Type', file.mime_type);
+            res.setHeader('Content-Disposition', `attachment; filename="${file.original_name}"`);
+            res.setHeader('Content-Length', file.size);
 
             // Stream file to response
             const fileStream = fs.createReadStream(file.storage_path);

@@ -131,12 +131,10 @@ export async function downloadFile(req: AuthRequest, res: Response): Promise<voi
             return;
         }
 
-        // Set headers for download
-        res.setHeader('Content-Type', file.mime_type);
-        res.setHeader('Content-Disposition', `attachment; filename="${file.original_name}"`);
-        res.setHeader('Content-Length', file.size);
+
 
         if (isS3Storage && s3Client) {
+            // Download from S3
             // Download from S3
             try {
                 const command = new GetObjectCommand({
@@ -146,17 +144,27 @@ export async function downloadFile(req: AuthRequest, res: Response): Promise<voi
 
                 const response = await s3Client.send(command);
 
+                // Set headers based on S3 response
+                res.setHeader('Content-Type', file.mime_type);
+                res.setHeader('Content-Disposition', `attachment; filename="${file.original_name}"`);
+
+                if (response.ContentLength) {
+                    res.setHeader('Content-Length', response.ContentLength);
+                }
+
                 if (response.Body instanceof Readable) {
-                    response.Body.pipe(res);
+                    response.Body.pipe(res).on('error', (err) => {
+                        console.error('Stream piping error:', err);
+                    });
                 } else if (response.Body) {
-                    // Handle stream if it's not strictly an instance of Readable (rare in Node)
-                    (response.Body as any).pipe(res);
+                    (response.Body as any).pipe(res).on('error', (err: any) => {
+                        console.error('Stream piping error (any):', err);
+                    });
                 } else {
                     throw new Error('Empty response body from S3');
                 }
             } catch (s3Error) {
                 console.error('S3 Download Error:', s3Error);
-                // Don't send JSON if headers sent
                 if (!res.headersSent) {
                     res.status(404).json({ error: 'File not found in cloud storage' });
                 }
@@ -167,6 +175,10 @@ export async function downloadFile(req: AuthRequest, res: Response): Promise<voi
                 res.status(404).json({ error: 'File not found on storage' });
                 return;
             }
+
+            res.setHeader('Content-Type', file.mime_type);
+            res.setHeader('Content-Disposition', `attachment; filename="${file.original_name}"`);
+            res.setHeader('Content-Length', file.size);
 
             // Stream file to response
             const fileStream = fs.createReadStream(file.storage_path);
