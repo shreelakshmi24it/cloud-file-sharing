@@ -68,19 +68,23 @@ const DashboardPage = () => {
       const token = localStorage.getItem('token');
       const response = await axios.get(`${API_URL}/files/${fileId}/download`, {
         headers: { 'Authorization': `Bearer ${token}` },
-        responseType: 'blob',
       });
 
-      // Create download link
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', fileName);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
+      if (response.data.downloadUrl) {
+        // Direct S3 download (handled by browser, no Auth headers sent to S3)
+        const link = document.createElement('a');
+        link.href = response.data.downloadUrl;
+        link.setAttribute('download', fileName); // Hint to browser
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+      } else {
+        // Fallback for local files (if any) or legacy response
+        console.error('Unexpected download response format');
+      }
     } catch (error) {
       console.error('Download failed:', error);
+      alert('Download failed. Please try again.');
     }
   };
 

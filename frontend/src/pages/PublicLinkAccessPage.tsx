@@ -155,21 +155,26 @@ const PublicLinkAccessPage = () => {
                 }
             );
 
-            // Simulate decryption
-            setPageState('decrypting');
-            setDownloadProgress(100);
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            if (response.data.downloadUrl) {
+                // Simulate decryption (client-side preparation)
+                setPageState('decrypting');
+                setDownloadProgress(100);
+                await new Promise(resolve => setTimeout(resolve, 1000));
 
-            // Create download link
-            const url = window.URL.createObjectURL(new Blob([response.data]));
-            const link = document.createElement('a');
-            link.href = url;
-            link.setAttribute('download', fileData.fileName);
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
+                // Trigger direct download using the provided URL
+                const link = document.createElement('a');
+                link.href = response.data.downloadUrl;
+                link.setAttribute('download', fileData.fileName); // Use fileData.fileName
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
 
-            setPageState('success');
+                setPageState('success');
+            } else {
+                console.error('Unexpected download response format: No downloadUrl provided');
+                setError('Download failed: Invalid server response');
+                setPageState('error');
+            }
         } catch (err: any) {
             console.error('Download error:', err);
             setError(err.response?.data?.error || 'Download failed. Please try again.');

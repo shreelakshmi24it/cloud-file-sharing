@@ -34,14 +34,12 @@ export const getSharedWithMe = async (): Promise<SharedFile[]> => {
     return response.data.shares;
 };
 
-export const downloadSharedFile = async (shareToken: string, password?: string): Promise<Blob> => {
+export const downloadSharedFile = async (shareToken: string, password?: string): Promise<{ downloadUrl: string }> => {
     const url = password
         ? `${API_URL}/share/${shareToken}/download?password=${encodeURIComponent(password)}`
         : `${API_URL}/share/${shareToken}/download`;
 
-    const response = await axios.get(url, {
-        responseType: 'blob',
-    });
+    const response = await axios.get(url);
 
     return response.data;
 };

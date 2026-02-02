@@ -218,18 +218,19 @@ const FilesPage = () => {
             const token = localStorage.getItem('token');
             const response = await axios.get(`${API_URL}/files/${fileId}/download`, {
                 headers: { 'Authorization': `Bearer ${token}` },
-                responseType: 'blob',
             });
 
-            const url = window.URL.createObjectURL(new Blob([response.data]));
-            const link = document.createElement('a');
-            link.href = url;
-            link.setAttribute('download', fileName);
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
+            if (response.data.downloadUrl) {
+                const link = document.createElement('a');
+                link.href = response.data.downloadUrl;
+                link.setAttribute('download', fileName);
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+            }
         } catch (error) {
             console.error('Download failed:', error);
+            alert('Download failed');
         }
     };
 

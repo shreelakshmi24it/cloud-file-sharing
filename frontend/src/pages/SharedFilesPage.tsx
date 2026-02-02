@@ -81,15 +81,21 @@ const SharedFilesPage = () => {
 
     const performDownload = async (file: SharedFile, password?: string) => {
         try {
-            const blob = await downloadSharedFile(file.shareToken, password);
-            const url = window.URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = file.file.name;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            window.URL.revokeObjectURL(url);
+            const response = await downloadSharedFile(file.shareToken, password);
+            if (response.downloadUrl) {
+                const link = document.createElement('a');
+                link.href = response.downloadUrl;
+                link.setAttribute('download', file.file.name);
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+            } else {
+                // If downloadUrl is not present, it means the service returned a Blob directly
+                // This case should ideally not happen if the service consistently returns { downloadUrl: string }
+                // but as a fallback or if the service can return a Blob, we handle it.
+                // However, the instruction is to remove blob handling, so we'll throw an error if no downloadUrl.
+                throw new Error('No download URL received for direct download.');
+            }
 
             // Close password modal if open
             setPasswordModalOpen(false);
@@ -142,9 +148,12 @@ const SharedFilesPage = () => {
         setPreviewUrl(null);
 
         try {
-            const blob = await downloadSharedFile(file.shareToken);
-            const url = window.URL.createObjectURL(blob);
-            setPreviewUrl(url);
+            const response = await downloadSharedFile(file.shareToken);
+            if (response.downloadUrl) {
+                setPreviewUrl(response.downloadUrl);
+            } else {
+                throw new Error('No preview URL received');
+            }
         } catch (err: any) {
             console.error('Preview error:', err);
             alert(err.response?.data?.error || 'Failed to preview file');

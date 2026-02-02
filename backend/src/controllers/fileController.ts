@@ -144,8 +144,8 @@ export async function downloadFile(req: AuthRequest, res: Response): Promise<voi
 
                 const signedUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
 
-                // Redirect client to S3 directly
-                res.redirect(307, signedUrl);
+                // Return Presigned URL to client (Frontend will handle the download)
+                res.status(200).json({ downloadUrl: signedUrl });
                 return;
             } catch (s3Error) {
                 console.error('S3 Presigned URL Error:', s3Error);
