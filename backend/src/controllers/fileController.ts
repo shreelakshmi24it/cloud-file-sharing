@@ -26,8 +26,8 @@ export async function uploadFile(req: AuthRequest, res: Response): Promise<void>
         const storagePath = (req.file as any).key || req.file.path;
         let fileSize = req.file.size;
 
-        // Fix: If S3 upload and size is reported as 0, fetch real size from S3
-        if (isS3Storage && s3Client && fileSize === 0) {
+        // Fix: If S3 upload and size is reported as 0 or undefined, fetch real size from S3
+        if (isS3Storage && s3Client && !fileSize) {
             try {
                 const headCommand = new HeadObjectCommand({
                     Bucket: config.aws.s3BucketName,
@@ -39,9 +39,13 @@ export async function uploadFile(req: AuthRequest, res: Response): Promise<void>
                 }
             } catch (err) {
                 console.error('Failed to fetch S3 object capability:', err);
-                // Continue with 0 size if retrieval fails
+                // Fallback to 0 if retrieval fails
+                fileSize = 0;
             }
         }
+
+        // Ensure fileSize is a number (handle undefined/null fallback)
+        fileSize = fileSize || 0;
 
         // Create file record in database
         const file = await FileModel.create({
