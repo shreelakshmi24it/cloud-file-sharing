@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { Cloud, Upload, LogOut, Settings, HardDrive, File, Download, Trash2, Share2, X, Copy, Check, Lock, Calendar, User } from 'lucide-react';
 import axios from 'axios';
 
-const API_URL = 'http://localhost:5000/api';
+import { API_URL } from '../config';
 
 interface FileItem {
   id: string;
