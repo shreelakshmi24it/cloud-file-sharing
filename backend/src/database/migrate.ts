@@ -17,11 +17,19 @@ async function runMigrations() {
 
         // Close the database connection
         await db.disconnect();
+
+        // Exit successfully
+        process.exit(0);
     } catch (error) {
         console.error('❌ Migration failed:', error);
         await db.disconnect();
-        throw error; // Let the calling process handle the error
+        // Exit with error code
+        process.exit(1);
     }
 }
 
-runMigrations();
+// Run migrations and handle any unhandled rejections
+runMigrations().catch((error) => {
+    console.error('Unhandled error during migration:', error);
+    process.exit(1);
+});
