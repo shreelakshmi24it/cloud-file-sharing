@@ -1,6 +1,7 @@
 import config from '../config';
 import { GetObjectCommand } from '@aws-sdk/client-s3';
 import { s3Client, isS3Storage } from '../middleware/upload';
+import { Readable } from 'stream';
 
 import { Request, Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
@@ -198,6 +199,8 @@ export async function downloadSharedFile(req: Request, res: Response): Promise<v
         res.setHeader('Content-Disposition', `attachment; filename="${file.original_name}"`);
         res.setHeader('Content-Length', file.size);
 
+
+
         if (isS3Storage && s3Client) {
             // Download from S3
             try {
@@ -208,14 +211,18 @@ export async function downloadSharedFile(req: Request, res: Response): Promise<v
 
                 const response = await s3Client.send(command);
 
-                if (response.Body) {
+                if (response.Body instanceof Readable) {
+                    response.Body.pipe(res);
+                } else if (response.Body) {
                     (response.Body as any).pipe(res);
                 } else {
                     throw new Error('Empty response body from S3');
                 }
             } catch (s3Error) {
                 console.error('S3 Download Error:', s3Error);
-                res.status(404).json({ error: 'File not found in cloud storage' });
+                if (!res.headersSent) {
+                    res.status(404).json({ error: 'File not found in cloud storage' });
+                }
             }
         } else {
             // Check if file exists on disk

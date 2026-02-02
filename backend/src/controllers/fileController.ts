@@ -4,9 +4,10 @@ import FileModel from '../models/File';
 import UserModel from '../models/User';
 import fs from 'fs';
 import crypto from 'crypto';
-import { GetObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { GetObjectCommand, DeleteObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
 import { s3Client, isS3Storage } from '../middleware/upload';
 import config from '../config';
+import { Readable } from 'stream';
 
 export async function uploadFile(req: AuthRequest, res: Response): Promise<void> {
     try {
@@ -22,15 +23,32 @@ export async function uploadFile(req: AuthRequest, res: Response): Promise<void>
         const encryptedKey = crypto.randomBytes(32).toString('hex');
 
         // Determine storage path (S3 Key or Local Path)
-        // multer-s3 adds 'key' to req.file, default multer uses 'path'
         const storagePath = (req.file as any).key || req.file.path;
+        let fileSize = req.file.size;
+
+        // Fix: If S3 upload and size is reported as 0, fetch real size from S3
+        if (isS3Storage && s3Client && fileSize === 0) {
+            try {
+                const headCommand = new HeadObjectCommand({
+                    Bucket: config.aws.s3BucketName,
+                    Key: storagePath,
+                });
+                const headData = await s3Client.send(headCommand);
+                if (headData.ContentLength) {
+                    fileSize = headData.ContentLength;
+                }
+            } catch (err) {
+                console.error('Failed to fetch S3 object capability:', err);
+                // Continue with 0 size if retrieval fails
+            }
+        }
 
         // Create file record in database
         const file = await FileModel.create({
             user_id: userId,
-            name: req.file.filename || (req.file as any).key || req.file.originalname, // Fallbacks
+            name: req.file.filename || (req.file as any).key || req.file.originalname,
             original_name: req.file.originalname,
-            size: req.file.size,
+            size: fileSize,
             mime_type: req.file.mimetype,
             encrypted_key: encryptedKey,
             storage_path: storagePath,
@@ -38,7 +56,7 @@ export async function uploadFile(req: AuthRequest, res: Response): Promise<void>
         });
 
         // Update user's storage usage
-        await UserModel.updateStorageUsed(userId, req.file.size);
+        await UserModel.updateStorageUsed(userId, fileSize);
 
         res.status(201).json({
             message: 'File uploaded successfully',
@@ -119,20 +137,25 @@ export async function downloadFile(req: AuthRequest, res: Response): Promise<voi
             try {
                 const command = new GetObjectCommand({
                     Bucket: config.aws.s3BucketName,
-                    Key: file.storage_path, // storage_path stores the S3 Key
+                    Key: file.storage_path,
                 });
 
                 const response = await s3Client.send(command);
 
-                if (response.Body) {
-                    // response.Body is a readable stream in Node.js
+                if (response.Body instanceof Readable) {
+                    response.Body.pipe(res);
+                } else if (response.Body) {
+                    // Handle stream if it's not strictly an instance of Readable (rare in Node)
                     (response.Body as any).pipe(res);
                 } else {
                     throw new Error('Empty response body from S3');
                 }
             } catch (s3Error) {
                 console.error('S3 Download Error:', s3Error);
-                res.status(404).json({ error: 'File not found in cloud storage' });
+                // Don't send JSON if headers sent
+                if (!res.headersSent) {
+                    res.status(404).json({ error: 'File not found in cloud storage' });
+                }
             }
         } else {
             // Local fallback
