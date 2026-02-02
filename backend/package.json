@@ -9,6 +9,7 @@
         "start": "node dist/server.js",
         "migrate": "node dist/database/migrate.js",
         "seed": "node dist/database/seed.js",
+        "postinstall": "npm run build",
         "test": "jest",
         "test:unit": "jest --testPathPattern=unit",
         "test:watch": "jest --watch",
