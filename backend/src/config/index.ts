@@ -18,6 +18,7 @@ interface Config {
         host: string;
         port: number;
         password: string;
+        url?: string;
     };
     jwt: {
         secret: string;
@@ -73,29 +74,6 @@ function parseDatabaseUrl() {
 
 const parsedDbConfig = parseDatabaseUrl();
 
-// Parse REDIS_URL if provided (for Railway, Heroku, etc.)
-function parseRedisUrl() {
-    const redisUrl = process.env.REDIS_URL;
-
-    if (redisUrl) {
-        try {
-            const url = new URL(redisUrl);
-            return {
-                host: url.hostname,
-                port: parseInt(url.port || '6379', 10),
-                password: url.password || '',
-            };
-        } catch (error) {
-            console.error('Error parsing REDIS_URL:', error);
-            // Fall back to individual env vars
-            return null;
-        }
-    }
-    return null;
-}
-
-const parsedRedisConfig = parseRedisUrl();
-
 const config: Config = {
     env: process.env.NODE_ENV || 'development',
     port: parseInt(process.env.PORT || '5000', 10),
@@ -110,7 +88,8 @@ const config: Config = {
         password: process.env.DB_PASSWORD || '',
     },
 
-    redis: parsedRedisConfig || {
+    redis: {
+        url: process.env.REDIS_URL || undefined,
         host: process.env.REDIS_HOST || 'localhost',
         port: parseInt(process.env.REDIS_PORT || '6379', 10),
         password: process.env.REDIS_PASSWORD || '',

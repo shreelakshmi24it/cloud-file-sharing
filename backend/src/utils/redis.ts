@@ -16,29 +16,45 @@ class RedisClient {
     private isConnected: boolean = false;
 
     private constructor() {
-        this.client = createClient({
-            socket: {
+        const options: any = {};
+
+        if (config.redis.url) {
+            options.url = config.redis.url;
+            console.log('Redis client configured with connection URL');
+        } else {
+            options.socket = {
                 host: config.redis.host,
                 port: config.redis.port,
-            },
-            password: config.redis.password || undefined,
-        });
+            };
+            if (config.redis.password) {
+                options.password = config.redis.password;
+            }
+            console.log(`Redis client configured with host: ${config.redis.host}:${config.redis.port}`);
+        }
+
+        this.client = createClient(options);
 
         // Error handler
         this.client.on('error', (err) => {
-            console.error('Redis Client Error:', err);
+            // Only log errors if we were previously connected or if it's not a connection refused error during startup
+            // (which is handled by the initial connect() call)
+            if (this.isConnected || (err.code !== 'ECONNREFUSED')) {
+                console.error('Redis Client Error:', err.message);
+            }
             this.isConnected = false;
         });
 
         // Connection handler
         this.client.on('connect', () => {
-            console.log('✅ Redis Client Connected');
+            // console.log('✅ Redis Client Connected'); // Reduce noise
             this.isConnected = true;
         });
 
         // Disconnection handler
         this.client.on('disconnect', () => {
-            console.log('❌ Redis Client Disconnected');
+            if (this.isConnected) {
+                console.log('❌ Redis Client Disconnected');
+            }
             this.isConnected = false;
         });
     }
@@ -59,11 +75,18 @@ class RedisClient {
     public async connect(): Promise<void> {
         if (!this.isConnected) {
             try {
+                if (config.redis.url) {
+                    // Mask password in logs
+                    const maskedUrl = config.redis.url.replace(/:([^@]+)@/, ':****@');
+                    console.log(`Attempting to connect to Redis URL: ${maskedUrl}`);
+                } else {
+                    console.log(`Attempting to connect to Redis: ${config.redis.host}:${config.redis.port}`);
+                }
+
                 await this.client.connect();
                 console.log('✅ Redis connected successfully');
-                console.log(`   Host: ${config.redis.host}:${config.redis.port}`);
             } catch (error) {
-                console.error('❌ Redis connection failed:', error);
+                console.error('❌ Redis connection failed:', error instanceof Error ? error.message : error);
                 throw error;
             }
         }
