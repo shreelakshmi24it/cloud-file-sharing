@@ -33,7 +33,7 @@ const SettingsPage = () => {
     const [isSaving, setIsSaving] = useState(false);
     const [saveSuccess, setSaveSuccess] = useState(false);
     const [error, setError] = useState('');
-    const [loading, setLoading] = useState(false);
+    const [, setLoading] = useState(false);
 
     // Profile settings
     const [profileData, setProfileData] = useState({

@@ -30,7 +30,7 @@ interface UploadFile {
 
 const FileUploadPage = () => {
     const navigate = useNavigate();
-    const { user } = useAuth();
+    const { } = useAuth();
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [uploadFiles, setUploadFiles] = useState<UploadFile[]>([]);
     const [isDragging, setIsDragging] = useState(false);

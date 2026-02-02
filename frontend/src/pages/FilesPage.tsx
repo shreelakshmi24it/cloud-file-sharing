@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Cloud, LogOut, Settings, File, Download, Trash2, Share2, X, Copy, Check, Lock, Calendar, Search, ArrowUpDown, Folder, FolderPlus, Home, ChevronRight, MoreVertical, Edit2, FolderInput, User } from 'lucide-react';
+import { Cloud, LogOut, Settings, File, Download, Trash2, Share2, X, Copy, Check, Lock, Calendar, Search, ArrowUpDown, Folder, FolderPlus, Home, ChevronRight, FolderInput, User } from 'lucide-react';
 import axios from 'axios';
 
 import { API_URL } from '../config';
@@ -68,7 +68,7 @@ const FilesPage = () => {
     const [moveFileModalOpen, setMoveFileModalOpen] = useState(false);
     const [fileToMove, setFileToMove] = useState<FileItem | null>(null);
     const [selectedFolder, setSelectedFolder] = useState<FolderItem | null>(null);
-    const [folderMenuOpen, setFolderMenuOpen] = useState<string | null>(null);
+    // Unused state removed
     const [copiedToken, setCopiedToken] = useState<string | null>(null);
 
     useEffect(() => {
