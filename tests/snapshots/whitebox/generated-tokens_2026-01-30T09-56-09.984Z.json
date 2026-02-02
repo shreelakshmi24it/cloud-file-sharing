@@ -1,0 +1,19 @@
+{
+  "testType": "whitebox",
+  "name": "generated-tokens",
+  "timestamp": "2026-01-30T09:56:09.984Z",
+  "data": [
+    {
+      "userId": "user_1",
+      "token": "token_user_1_1769766969984"
+    },
+    {
+      "userId": "user_2",
+      "token": "token_user_2_1769766969984"
+    },
+    {
+      "userId": "user_3",
+      "token": "token_user_3_1769766969984"
+    }
+  ]
+}

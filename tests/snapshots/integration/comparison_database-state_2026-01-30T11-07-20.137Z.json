@@ -1,0 +1,59 @@
+{
+  "testType": "integration",
+  "name": "comparison_database-state",
+  "timestamp": "2026-01-30T11:07:20.137Z",
+  "data": {
+    "name": "database-state",
+    "before": {
+      "users": [],
+      "files": [],
+      "totalStorage": 0
+    },
+    "after": {
+      "users": [
+        {
+          "id": "user_123",
+          "email": "test@example.com"
+        }
+      ],
+      "files": [
+        {
+          "id": "file_123",
+          "name": "test.txt",
+          "size": 1024
+        }
+      ],
+      "totalStorage": 1024
+    },
+    "diff": {
+      "added": {},
+      "removed": {},
+      "changed": {
+        "users": {
+          "before": [],
+          "after": [
+            {
+              "id": "user_123",
+              "email": "test@example.com"
+            }
+          ]
+        },
+        "files": {
+          "before": [],
+          "after": [
+            {
+              "id": "file_123",
+              "name": "test.txt",
+              "size": 1024
+            }
+          ]
+        },
+        "totalStorage": {
+          "before": 0,
+          "after": 1024
+        }
+      }
+    },
+    "timestamp": "2026-01-30T11:07:20.137Z"
+  }
+}

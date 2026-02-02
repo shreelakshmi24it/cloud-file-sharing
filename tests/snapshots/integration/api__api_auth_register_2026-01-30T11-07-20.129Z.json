@@ -1,0 +1,21 @@
+{
+  "testType": "integration",
+  "name": "api__api_auth_register",
+  "timestamp": "2026-01-30T11:07:20.129Z",
+  "data": {
+    "endpoint": "/api/auth/register",
+    "status": 201,
+    "headers": {
+      "content-type": "application/json"
+    },
+    "body": {
+      "success": true,
+      "user": {
+        "id": "user_123",
+        "email": "test@example.com",
+        "createdAt": "2026-01-30T11:07:20.129Z"
+      }
+    },
+    "timestamp": "2026-01-30T11:07:20.129Z"
+  }
+}

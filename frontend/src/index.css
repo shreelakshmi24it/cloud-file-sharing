@@ -1,0 +1,7 @@
+/* src/index.css or src/global.css or whatever you use */
+@import "tailwindcss";
+
+/* your own styles can go after this */
+body {
+  font-family: system-ui, sans-serif;
+}

@@ -1,0 +1,21 @@
+{
+  "testType": "integration",
+  "name": "api__api_auth_login",
+  "timestamp": "2026-01-30T11:07:20.131Z",
+  "data": {
+    "endpoint": "/api/auth/login",
+    "status": 200,
+    "headers": {
+      "content-type": "application/json"
+    },
+    "body": {
+      "success": true,
+      "token": "jwt_token_here",
+      "user": {
+        "id": "user_123",
+        "email": "test@example.com"
+      }
+    },
+    "timestamp": "2026-01-30T11:07:20.131Z"
+  }
+}

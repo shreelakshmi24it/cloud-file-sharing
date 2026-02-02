@@ -1,0 +1,21 @@
+{
+  "testType": "integration",
+  "name": "api__api_files_upload",
+  "timestamp": "2026-01-30T11:07:20.135Z",
+  "data": {
+    "endpoint": "/api/files/upload",
+    "status": 201,
+    "headers": {},
+    "body": {
+      "success": true,
+      "file": {
+        "id": "file_123",
+        "name": "test.txt",
+        "size": 1024,
+        "s3Key": "uploads/user_123/file_123.txt",
+        "uploadedAt": "2026-01-30T11:07:20.135Z"
+      }
+    },
+    "timestamp": "2026-01-30T11:07:20.135Z"
+  }
+}

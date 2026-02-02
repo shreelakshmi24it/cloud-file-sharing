@@ -1,0 +1,36 @@
+{
+    "name": "cloud-file-sharing-tests",
+    "version": "1.0.0",
+    "description": "Comprehensive testing suite for cloud file-sharing application",
+    "scripts": {
+        "test": "mocha 'tests/**/*.test.js' --reporter mochawesome --timeout 30000",
+        "test:unit": "npm run test:unit:backend && npm run test:unit:frontend",
+        "test:unit:backend": "cd ../backend && npm run test:unit",
+        "test:unit:frontend": "cd ../frontend && npm run test:unit",
+        "test:whitebox": "mocha 'whitebox/**/*.test.js' --reporter spec --timeout 30000",
+        "test:blackbox": "mocha 'blackbox/**/*.test.js' --reporter spec --timeout 60000",
+        "test:integration": "mocha 'integration/**/*.test.js' --reporter spec --timeout 30000",
+        "test:functionality": "mocha 'functionality/**/*.test.js' --reporter spec --timeout 60000",
+        "test:all": "npm run test:unit && npm run test:whitebox && npm run test:blackbox && npm run test:integration && npm run test:functionality",
+        "test:coverage": "nyc npm test"
+    },
+    "keywords": [
+        "testing",
+        "selenium",
+        "integration",
+        "e2e"
+    ],
+    "author": "",
+    "license": "MIT",
+    "devDependencies": {
+        "selenium-webdriver": "^4.16.0",
+        "mocha": "^10.2.0",
+        "chai": "^4.3.10",
+        "@types/mocha": "^10.0.6",
+        "@types/chai": "^4.3.11",
+        "@types/selenium-webdriver": "^4.1.20",
+        "mochawesome": "^7.1.3",
+        "nyc": "^15.1.0",
+        "dotenv": "^16.3.1"
+    }
+}

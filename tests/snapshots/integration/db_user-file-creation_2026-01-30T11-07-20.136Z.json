@@ -1,0 +1,32 @@
+{
+  "testType": "integration",
+  "name": "db_user-file-creation",
+  "timestamp": "2026-01-30T11:07:20.136Z",
+  "data": {
+    "operation": "user-file-creation",
+    "data": {
+      "before": {
+        "users": [],
+        "files": [],
+        "totalStorage": 0
+      },
+      "after": {
+        "users": [
+          {
+            "id": "user_123",
+            "email": "test@example.com"
+          }
+        ],
+        "files": [
+          {
+            "id": "file_123",
+            "name": "test.txt",
+            "size": 1024
+          }
+        ],
+        "totalStorage": 1024
+      }
+    },
+    "timestamp": "2026-01-30T11:07:20.136Z"
+  }
+}

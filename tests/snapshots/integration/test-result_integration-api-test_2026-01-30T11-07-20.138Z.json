@@ -1,0 +1,17 @@
+{
+  "testType": "integration",
+  "name": "test-result_integration-api-test",
+  "timestamp": "2026-01-30T11:07:20.138Z",
+  "data": {
+    "testName": "integration-api-test",
+    "passed": true,
+    "duration": 150,
+    "timestamp": "2026-01-30T11:07:20.138Z",
+    "details": {
+      "apiCalls": 3,
+      "dbQueries": 5,
+      "assertions": 10
+    },
+    "error": null
+  }
+}

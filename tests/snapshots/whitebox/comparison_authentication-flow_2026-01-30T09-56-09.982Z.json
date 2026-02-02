@@ -1,0 +1,45 @@
+{
+  "testType": "whitebox",
+  "name": "comparison_authentication-flow",
+  "timestamp": "2026-01-30T09:56:09.982Z",
+  "data": {
+    "name": "authentication-flow",
+    "before": {
+      "user": null,
+      "isAuthenticated": false,
+      "token": null,
+      "timestamp": "2026-01-30T09:56:09.981Z"
+    },
+    "after": {
+      "user": {
+        "id": "user_123",
+        "email": "test@example.com"
+      },
+      "isAuthenticated": true,
+      "token": "jwt_token_here",
+      "timestamp": "2026-01-30T09:56:09.981Z"
+    },
+    "diff": {
+      "added": {},
+      "removed": {},
+      "changed": {
+        "user": {
+          "before": null,
+          "after": {
+            "id": "user_123",
+            "email": "test@example.com"
+          }
+        },
+        "isAuthenticated": {
+          "before": false,
+          "after": true
+        },
+        "token": {
+          "before": null,
+          "after": "jwt_token_here"
+        }
+      }
+    },
+    "timestamp": "2026-01-30T09:56:09.982Z"
+  }
+}
