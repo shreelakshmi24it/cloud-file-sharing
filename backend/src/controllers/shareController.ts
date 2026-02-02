@@ -1,3 +1,5 @@
+import config from '../config';
+
 import { Request, Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import ShareModel from '../models/Share';
@@ -52,7 +54,7 @@ export async function createShare(req: AuthRequest, res: Response): Promise<void
 
         res.status(201).json({
             message: 'Share link created successfully',
-            share: ShareModel.toResponse(share),
+            share: ShareModel.toResponse(share, config.frontendUrl),
         });
     } catch (error) {
         console.error('Create share error:', error);
@@ -231,7 +233,7 @@ export async function getFileShares(req: AuthRequest, res: Response): Promise<vo
         const shares = await ShareModel.findByFileId(id);
 
         res.status(200).json({
-            shares: shares.map(share => ShareModel.toResponse(share)),
+            shares: shares.map(share => ShareModel.toResponse(share, config.frontendUrl)),
         });
     } catch (error) {
         console.error('Get file shares error:', error);
