@@ -4,6 +4,9 @@ import FileModel from '../models/File';
 import UserModel from '../models/User';
 import fs from 'fs';
 import crypto from 'crypto';
+import { GetObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { s3Client, isS3Storage } from '../middleware/upload';
+import config from '../config';
 
 export async function uploadFile(req: AuthRequest, res: Response): Promise<void> {
     try {
@@ -18,15 +21,19 @@ export async function uploadFile(req: AuthRequest, res: Response): Promise<void>
         // Generate encrypted key (simulated for now)
         const encryptedKey = crypto.randomBytes(32).toString('hex');
 
+        // Determine storage path (S3 Key or Local Path)
+        // multer-s3 adds 'key' to req.file, default multer uses 'path'
+        const storagePath = (req.file as any).key || req.file.path;
+
         // Create file record in database
         const file = await FileModel.create({
             user_id: userId,
-            name: req.file.filename,
+            name: req.file.filename || (req.file as any).key || req.file.originalname, // Fallbacks
             original_name: req.file.originalname,
             size: req.file.size,
             mime_type: req.file.mimetype,
             encrypted_key: encryptedKey,
-            storage_path: req.file.path,
+            storage_path: storagePath,
             folder_id: folder_id || undefined,
         });
 
@@ -102,23 +109,47 @@ export async function downloadFile(req: AuthRequest, res: Response): Promise<voi
             return;
         }
 
-        // Check if file exists on disk
-        if (!fs.existsSync(file.storage_path)) {
-            res.status(404).json({ error: 'File not found on storage' });
-            return;
-        }
-
         // Set headers for download
         res.setHeader('Content-Type', file.mime_type);
         res.setHeader('Content-Disposition', `attachment; filename="${file.original_name}"`);
         res.setHeader('Content-Length', file.size);
 
-        // Stream file to response
-        const fileStream = fs.createReadStream(file.storage_path);
-        fileStream.pipe(res);
+        if (isS3Storage && s3Client) {
+            // Download from S3
+            try {
+                const command = new GetObjectCommand({
+                    Bucket: config.aws.s3BucketName,
+                    Key: file.storage_path, // storage_path stores the S3 Key
+                });
+
+                const response = await s3Client.send(command);
+
+                if (response.Body) {
+                    // response.Body is a readable stream in Node.js
+                    (response.Body as any).pipe(res);
+                } else {
+                    throw new Error('Empty response body from S3');
+                }
+            } catch (s3Error) {
+                console.error('S3 Download Error:', s3Error);
+                res.status(404).json({ error: 'File not found in cloud storage' });
+            }
+        } else {
+            // Local fallback
+            if (!fs.existsSync(file.storage_path)) {
+                res.status(404).json({ error: 'File not found on storage' });
+                return;
+            }
+
+            // Stream file to response
+            const fileStream = fs.createReadStream(file.storage_path);
+            fileStream.pipe(res);
+        }
     } catch (error) {
         console.error('Download error:', error);
-        res.status(500).json({ error: 'File download failed' });
+        if (!res.headersSent) {
+            res.status(500).json({ error: 'File download failed' });
+        }
     }
 }
 
@@ -140,9 +171,23 @@ export async function deleteFile(req: AuthRequest, res: Response): Promise<void>
             return;
         }
 
-        // Delete file from disk
-        if (fs.existsSync(file.storage_path)) {
-            fs.unlinkSync(file.storage_path);
+        if (isS3Storage && s3Client) {
+            // Delete from S3
+            try {
+                const command = new DeleteObjectCommand({
+                    Bucket: config.aws.s3BucketName,
+                    Key: file.storage_path,
+                });
+                await s3Client.send(command);
+            } catch (s3Error) {
+                console.error('S3 Delete Error (non-fatal):', s3Error);
+                // Continue to delete from DB even if S3 fails (orphan cleanup logic might be needed later)
+            }
+        } else {
+            // Delete file from disk
+            if (fs.existsSync(file.storage_path)) {
+                fs.unlinkSync(file.storage_path);
+            }
         }
 
         // Soft delete from database

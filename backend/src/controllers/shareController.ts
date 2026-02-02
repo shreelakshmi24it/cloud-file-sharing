@@ -1,4 +1,6 @@
 import config from '../config';
+import { GetObjectCommand } from '@aws-sdk/client-s3';
+import { s3Client, isS3Storage } from '../middleware/upload';
 
 import { Request, Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
@@ -189,23 +191,43 @@ export async function downloadSharedFile(req: Request, res: Response): Promise<v
             return;
         }
 
-        // Check if file exists on disk
-        if (!fs.existsSync(file.storage_path)) {
-            res.status(404).json({ error: 'File not found on storage' });
-            return;
-        }
 
-        // Increment download count
-        await ShareModel.incrementDownloadCount(share.id);
 
         // Set headers for download
         res.setHeader('Content-Type', file.mime_type);
         res.setHeader('Content-Disposition', `attachment; filename="${file.original_name}"`);
         res.setHeader('Content-Length', file.size);
 
-        // Stream file to response
-        const fileStream = fs.createReadStream(file.storage_path);
-        fileStream.pipe(res);
+        if (isS3Storage && s3Client) {
+            // Download from S3
+            try {
+                const command = new GetObjectCommand({
+                    Bucket: config.aws.s3BucketName,
+                    Key: file.storage_path, // storage_path stores the S3 Key
+                });
+
+                const response = await s3Client.send(command);
+
+                if (response.Body) {
+                    (response.Body as any).pipe(res);
+                } else {
+                    throw new Error('Empty response body from S3');
+                }
+            } catch (s3Error) {
+                console.error('S3 Download Error:', s3Error);
+                res.status(404).json({ error: 'File not found in cloud storage' });
+            }
+        } else {
+            // Check if file exists on disk
+            if (!fs.existsSync(file.storage_path)) {
+                res.status(404).json({ error: 'File not found on storage' });
+                return;
+            }
+
+            // Stream file to response
+            const fileStream = fs.createReadStream(file.storage_path);
+            fileStream.pipe(res);
+        }
     } catch (error) {
         console.error('Download shared file error:', error);
         res.status(500).json({ error: 'Download failed' });
