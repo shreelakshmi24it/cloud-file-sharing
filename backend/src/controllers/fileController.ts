@@ -5,9 +5,9 @@ import UserModel from '../models/User';
 import fs from 'fs';
 import crypto from 'crypto';
 import { GetObjectCommand, DeleteObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { s3Client, isS3Storage } from '../middleware/upload';
 import config from '../config';
-import { Readable } from 'stream';
 
 export async function uploadFile(req: AuthRequest, res: Response): Promise<void> {
     try {
@@ -132,42 +132,27 @@ export async function downloadFile(req: AuthRequest, res: Response): Promise<voi
         }
 
 
-
         if (isS3Storage && s3Client) {
-            // Download from S3
-            // Download from S3
+            // Generate Presigned URL for direct download
             try {
                 const command = new GetObjectCommand({
                     Bucket: config.aws.s3BucketName,
                     Key: file.storage_path,
+                    ResponseContentDisposition: `attachment; filename="${file.original_name}"`,
+                    ResponseContentType: file.mime_type,
                 });
 
-                const response = await s3Client.send(command);
+                const signedUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
 
-                // Set headers based on S3 response
-                res.setHeader('Content-Type', file.mime_type);
-                res.setHeader('Content-Disposition', `attachment; filename="${file.original_name}"`);
-
-                if (response.ContentLength) {
-                    res.setHeader('Content-Length', response.ContentLength);
-                }
-
-                if (response.Body instanceof Readable) {
-                    response.Body.pipe(res).on('error', (err) => {
-                        console.error('Stream piping error:', err);
-                    });
-                } else if (response.Body) {
-                    (response.Body as any).pipe(res).on('error', (err: any) => {
-                        console.error('Stream piping error (any):', err);
-                    });
-                } else {
-                    throw new Error('Empty response body from S3');
-                }
+                // Redirect client to S3 directly
+                res.redirect(307, signedUrl);
+                return;
             } catch (s3Error) {
-                console.error('S3 Download Error:', s3Error);
+                console.error('S3 Presigned URL Error:', s3Error);
                 if (!res.headersSent) {
-                    res.status(404).json({ error: 'File not found in cloud storage' });
+                    res.status(500).json({ error: 'Failed to generate download link' });
                 }
+                return;
             }
         } else {
             // Local fallback
