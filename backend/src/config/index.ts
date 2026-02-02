@@ -48,13 +48,61 @@ interface Config {
     };
 }
 
+// Parse DATABASE_URL if provided (for Railway, Heroku, etc.)
+function parseDatabaseUrl() {
+    const databaseUrl = process.env.DATABASE_URL;
+
+    if (databaseUrl) {
+        try {
+            const url = new URL(databaseUrl);
+            return {
+                host: url.hostname,
+                port: parseInt(url.port || '5432', 10),
+                name: url.pathname.slice(1), // Remove leading '/'
+                user: url.username,
+                password: url.password,
+            };
+        } catch (error) {
+            console.error('Error parsing DATABASE_URL:', error);
+            // Fall back to individual env vars
+            return null;
+        }
+    }
+    return null;
+}
+
+const parsedDbConfig = parseDatabaseUrl();
+
+// Parse REDIS_URL if provided (for Railway, Heroku, etc.)
+function parseRedisUrl() {
+    const redisUrl = process.env.REDIS_URL;
+
+    if (redisUrl) {
+        try {
+            const url = new URL(redisUrl);
+            return {
+                host: url.hostname,
+                port: parseInt(url.port || '6379', 10),
+                password: url.password || '',
+            };
+        } catch (error) {
+            console.error('Error parsing REDIS_URL:', error);
+            // Fall back to individual env vars
+            return null;
+        }
+    }
+    return null;
+}
+
+const parsedRedisConfig = parseRedisUrl();
+
 const config: Config = {
     env: process.env.NODE_ENV || 'development',
     port: parseInt(process.env.PORT || '5000', 10),
     apiUrl: process.env.API_URL || 'http://localhost:5000',
     frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
 
-    database: {
+    database: parsedDbConfig || {
         host: process.env.DB_HOST || 'localhost',
         port: parseInt(process.env.DB_PORT || '5432', 10),
         name: process.env.DB_NAME || 'cloud_file_sharing',
@@ -62,7 +110,7 @@ const config: Config = {
         password: process.env.DB_PASSWORD || '',
     },
 
-    redis: {
+    redis: parsedRedisConfig || {
         host: process.env.REDIS_HOST || 'localhost',
         port: parseInt(process.env.REDIS_PORT || '6379', 10),
         password: process.env.REDIS_PASSWORD || '',
