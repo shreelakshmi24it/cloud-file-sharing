@@ -43,5 +43,9 @@ EXPOSE 5000
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
   CMD node -e "require('http').get('http://localhost:5000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
+# Copy start script
+COPY start.sh ./
+RUN chmod +x start.sh
+
 # Start application
-CMD ["node", "dist/server.js"]
+CMD ["./start.sh"]
