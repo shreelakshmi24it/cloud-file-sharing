@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Cloud, Mail, Lock, Eye, EyeOff, Shield } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const LoginPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { login, verify2FACode } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
@@ -34,7 +35,8 @@ const LoginPage = () => {
         setLoading(false);
       } else {
         // Normal login successful
-        navigate('/dashboard');
+        const returnUrl = (location.state as any)?.returnUrl || '/dashboard';
+        navigate(returnUrl);
       }
     } catch (err) {
       setError('Invalid email or password');
@@ -49,7 +51,8 @@ const LoginPage = () => {
 
     try {
       await verify2FACode(tempToken, twoFactorCode);
-      navigate('/dashboard');
+      const returnUrl = (location.state as any)?.returnUrl || '/dashboard';
+      navigate(returnUrl);
     } catch (err: any) {
       setError(err.message || 'Invalid verification code');
     } finally {
@@ -170,28 +173,6 @@ const LoginPage = () => {
                   {loading ? 'Logging in...' : 'Login'}
                 </button>
               </form>
-
-              {/* Divider */}
-              <div className="mt-6 relative">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-gray-300"></div>
-                </div>
-                <div className="relative flex justify-center text-sm">
-                  <span className="px-2 bg-white text-gray-500">Or continue with</span>
-                </div>
-              </div>
-
-              {/* Social Login */}
-              <div className="mt-6 grid grid-cols-2 gap-3">
-                <button className="flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition">
-                  <img src="https://www.google.com/favicon.ico" alt="Google" className="h-5 w-5 mr-2" />
-                  <span className="text-sm font-medium text-gray-700">Google</span>
-                </button>
-                <button className="flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition">
-                  <img src="https://github.com/favicon.ico" alt="GitHub" className="h-5 w-5 mr-2" />
-                  <span className="text-sm font-medium text-gray-700">GitHub</span>
-                </button>
-              </div>
 
               {/* Sign Up Link */}
               <p className="mt-6 text-center text-sm text-gray-600">

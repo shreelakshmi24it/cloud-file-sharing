@@ -5,6 +5,7 @@ import {
     verifyTwoFactor,
     disableTwoFactor,
     updateProfile,
+    uploadAvatar,
     getActiveSessions,
     revokeSession,
     getNotificationPreferences,
@@ -14,6 +15,7 @@ import {
     deleteAccount,
 } from '../controllers/settingsController';
 import { authenticate } from '../middleware/auth';
+import { upload } from '../middleware/upload';
 
 const router = Router();
 
@@ -30,6 +32,7 @@ router.post('/2fa/disable', disableTwoFactor);
 
 // Profile Management
 router.put('/profile', updateProfile);
+router.post('/avatar', upload.single('avatar'), uploadAvatar);
 
 // Session Management
 router.get('/sessions', getActiveSessions);

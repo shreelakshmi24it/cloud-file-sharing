@@ -44,7 +44,7 @@ interface SharedLinkData {
 type PageState = 'loading' | 'password-required' | 'ready' | 'downloading' | 'decrypting' | 'success' | 'error';
 
 const PublicLinkAccessPage = () => {
-    const { token } = useParams<{ token: string }>();
+    const { token: tokenParam } = useParams<{ token: string }>();
     const navigate = useNavigate();
 
     const [pageState, setPageState] = useState<PageState>('loading');
@@ -57,13 +57,16 @@ const PublicLinkAccessPage = () => {
 
     useEffect(() => {
         validateToken();
-    }, [token]);
+    }, [tokenParam]);
 
     const validateToken = async () => {
         setPageState('loading');
 
         try {
-            const response = await axios.get(`${API_URL}/share/${token}`);
+            const token = localStorage.getItem('token');
+            const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
+            const response = await axios.get(`${API_URL}/share/${tokenParam}`, { headers });
             const data = response.data;
 
             const shareData: SharedLinkData = {
@@ -86,10 +89,25 @@ const PublicLinkAccessPage = () => {
             }
         } catch (err: any) {
             console.error('Validation error:', err);
+
+            // Handle Auth Required for Email Shares
+            if (err.response?.status === 401) {
+                // Redirect to login with return URL
+                navigate('/login', {
+                    state: {
+                        returnUrl: `/share/${tokenParam}`,
+                        message: 'Please login to access this shared file'
+                    }
+                });
+                return;
+            }
+
             if (err.response?.status === 404) {
                 setError('This link is invalid or has expired.');
             } else if (err.response?.status === 410) {
                 setError(err.response.data.error || 'This link has expired.');
+            } else if (err.response?.status === 403) {
+                setError('Access denied: This file is not shared with your account.');
             } else {
                 setError('Failed to load share link. Please try again.');
             }
@@ -111,9 +129,12 @@ const PublicLinkAccessPage = () => {
         setPasswordError('');
 
         try {
-            await axios.post(`${API_URL}/share/${token}/validate`, {
+            const token = localStorage.getItem('token');
+            const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
+            await axios.post(`${API_URL}/share/${tokenParam}/validate`, {
                 password
-            });
+            }, { headers });
 
             setPageState('ready');
             setPasswordAttempts(0);
@@ -140,8 +161,12 @@ const PublicLinkAccessPage = () => {
             }
 
             // Download file from backend
+            const token = localStorage.getItem('token');
+            const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
             const response = await axios.get(
-                `${API_URL}/share/${token}/download${password ? `?password=${encodeURIComponent(password)}` : ''}`
+                `${API_URL}/share/${tokenParam}/download${password ? `?password=${encodeURIComponent(password)}` : ''}`,
+                { headers }
             );
 
             if (response.data.downloadUrl) {

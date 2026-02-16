@@ -105,3 +105,17 @@ export const deleteAccount = async (password: string) => {
     });
     return response.data;
 };
+
+// Avatar Upload
+export const uploadAvatar = async (file: File) => {
+    const formData = new FormData();
+    formData.append('avatar', file);
+
+    const response = await api.post('/settings/avatar', formData, {
+        headers: {
+            'Content-Type': 'multipart/form-data',
+        },
+    });
+    return response.data;
+};
+

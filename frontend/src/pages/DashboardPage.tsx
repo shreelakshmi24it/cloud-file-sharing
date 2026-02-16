@@ -196,7 +196,7 @@ const DashboardPage = () => {
               <span className="text-xl sm:text-2xl font-bold text-gray-900">SecureCloud</span>
             </div>
             <div className="flex items-center space-x-2 sm:space-x-4">
-              <div className="hidden md:block text-right mr-4">
+              <div className="hidden md:block text-left">
                 <p className="text-sm font-medium text-gray-900">{user.name}</p>
                 <p className="text-xs text-gray-500">{user.email}</p>
               </div>
@@ -436,145 +436,147 @@ const DashboardPage = () => {
       </div>
 
       {/* Share Modal */}
-      {shareModalOpen && selectedFile && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-0 sm:p-4">
-          <div className="bg-white rounded-none sm:rounded-lg shadow-xl w-full h-full sm:h-auto sm:max-w-2xl sm:max-h-[90vh] overflow-y-auto">
-            <div className="p-4 sm:p-6 border-b border-gray-200 sticky top-0 bg-white z-10">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Share File</h2>
-                <button
-                  onClick={() => setShareModalOpen(false)}
-                  className="text-gray-400 hover:text-gray-600 p-2 touch-manipulation"
-                  aria-label="Close"
-                >
-                  <X className="h-5 w-5 sm:h-6 sm:w-6" />
-                </button>
+      {
+        shareModalOpen && selectedFile && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-0 sm:p-4">
+            <div className="bg-white rounded-none sm:rounded-lg shadow-xl w-full h-full sm:h-auto sm:max-w-2xl sm:max-h-[90vh] overflow-y-auto">
+              <div className="p-4 sm:p-6 border-b border-gray-200 sticky top-0 bg-white z-10">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Share File</h2>
+                  <button
+                    onClick={() => setShareModalOpen(false)}
+                    className="text-gray-400 hover:text-gray-600 p-2 touch-manipulation"
+                    aria-label="Close"
+                  >
+                    <X className="h-5 w-5 sm:h-6 sm:w-6" />
+                  </button>
+                </div>
+                <p className="text-sm text-gray-600 mt-2 truncate">{selectedFile.original_name}</p>
               </div>
-              <p className="text-sm text-gray-600 mt-2 truncate">{selectedFile.original_name}</p>
-            </div>
 
-            <div className="p-4 sm:p-6">
-              {/* Create New Share */}
-              <div className="mb-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Create New Share Link</h3>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      <Lock className="h-4 w-4 inline mr-1" />
-                      Password (Optional)
-                    </label>
-                    <input
-                      type="password"
-                      value={sharePassword}
-                      onChange={(e) => setSharePassword(e.target.value)}
-                      placeholder="Leave empty for no password"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      <User className="h-4 w-4 inline mr-1" />
-                      Share with Email (Optional)
-                    </label>
-                    <input
-                      type="email"
-                      value={shareEmail}
-                      onChange={(e) => setShareEmail(e.target.value)}
-                      placeholder="user@example.com"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      Leave empty to create a public link, or enter an email to share directly with a specific user
-                    </p>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
+              <div className="p-4 sm:p-6">
+                {/* Create New Share */}
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Create New Share Link</h3>
+                  <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        <Calendar className="h-4 w-4 inline mr-1" />
-                        Expires In (Days)
-                      </label>
-                      <select
-                        value={shareExpiration}
-                        onChange={(e) => setShareExpiration(e.target.value)}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      >
-                        <option value="1">1 Day</option>
-                        <option value="7">7 Days</option>
-                        <option value="14">14 Days</option>
-                        <option value="30">30 Days</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Max Downloads (Optional)
+                        <Lock className="h-4 w-4 inline mr-1" />
+                        Password (Optional)
                       </label>
                       <input
-                        type="number"
-                        value={shareMaxDownloads}
-                        onChange={(e) => setShareMaxDownloads(e.target.value)}
-                        placeholder="Unlimited"
-                        min="1"
+                        type="password"
+                        value={sharePassword}
+                        onChange={(e) => setSharePassword(e.target.value)}
+                        placeholder="Leave empty for no password"
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       />
                     </div>
-                  </div>
 
-                  <button
-                    onClick={handleCreateShare}
-                    disabled={creatingShare}
-                    className="w-full bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition font-semibold disabled:bg-gray-400 disabled:cursor-not-allowed"
-                  >
-                    {creatingShare ? 'Creating...' : 'Create Share Link'}
-                  </button>
-                </div>
-              </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <User className="h-4 w-4 inline mr-1" />
+                        Share with Email (Optional)
+                      </label>
+                      <input
+                        type="email"
+                        value={shareEmail}
+                        onChange={(e) => setShareEmail(e.target.value)}
+                        placeholder="user@example.com"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Leave empty to create a public link, or enter an email to share directly with a specific user
+                      </p>
+                    </div>
 
-              {/* Existing Shares */}
-              {shareLinks.length > 0 && (
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Existing Share Links</h3>
-                  <div className="space-y-3">
-                    {shareLinks.map((share) => (
-                      <div key={share.id} className="border border-gray-200 rounded-lg p-4">
-                        <div className="flex items-start gap-2 mb-2">
-                          <code className="flex-1 text-sm bg-gray-100 px-2 py-1 rounded break-all">
-                            {share.share_url}
-                          </code>
-                          <button
-                            onClick={() => copyToClipboard(share.share_url, share.share_token)}
-                            className="flex-shrink-0 text-blue-600 hover:text-blue-800 p-1"
-                            title="Copy to clipboard"
-                          >
-                            {copiedToken === share.share_token ? (
-                              <Check className="h-5 w-5 text-green-600" />
-                            ) : (
-                              <Copy className="h-5 w-5" />
-                            )}
-                          </button>
-                        </div>
-                        <div className="flex items-center space-x-4 text-xs text-gray-500">
-                          {share.expires_at && (
-                            <span>Expires: {new Date(share.expires_at).toLocaleDateString()}</span>
-                          )}
-                          {share.max_downloads && (
-                            <span>Downloads: {share.download_count}/{share.max_downloads}</span>
-                          )}
-                          {!share.max_downloads && (
-                            <span>Downloads: {share.download_count}</span>
-                          )}
-                        </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <Calendar className="h-4 w-4 inline mr-1" />
+                          Expires In (Days)
+                        </label>
+                        <select
+                          value={shareExpiration}
+                          onChange={(e) => setShareExpiration(e.target.value)}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                          <option value="1">1 Day</option>
+                          <option value="7">7 Days</option>
+                          <option value="14">14 Days</option>
+                          <option value="30">30 Days</option>
+                        </select>
                       </div>
-                    ))}
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Max Downloads (Optional)
+                        </label>
+                        <input
+                          type="number"
+                          value={shareMaxDownloads}
+                          onChange={(e) => setShareMaxDownloads(e.target.value)}
+                          placeholder="Unlimited"
+                          min="1"
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        />
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={handleCreateShare}
+                      disabled={creatingShare}
+                      className="w-full bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition font-semibold disabled:bg-gray-400 disabled:cursor-not-allowed"
+                    >
+                      {creatingShare ? 'Creating...' : 'Create Share Link'}
+                    </button>
                   </div>
                 </div>
-              )}
+
+                {/* Existing Shares */}
+                {shareLinks.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Existing Share Links</h3>
+                    <div className="space-y-3">
+                      {shareLinks.map((share) => (
+                        <div key={share.id} className="border border-gray-200 rounded-lg p-4">
+                          <div className="flex items-start gap-2 mb-2">
+                            <code className="flex-1 text-sm bg-gray-100 px-2 py-1 rounded break-all">
+                              {share.share_url}
+                            </code>
+                            <button
+                              onClick={() => copyToClipboard(share.share_url, share.share_token)}
+                              className="flex-shrink-0 text-blue-600 hover:text-blue-800 p-1"
+                              title="Copy to clipboard"
+                            >
+                              {copiedToken === share.share_token ? (
+                                <Check className="h-5 w-5 text-green-600" />
+                              ) : (
+                                <Copy className="h-5 w-5" />
+                              )}
+                            </button>
+                          </div>
+                          <div className="flex items-center space-x-4 text-xs text-gray-500">
+                            {share.expires_at && (
+                              <span>Expires: {new Date(share.expires_at).toLocaleDateString()}</span>
+                            )}
+                            {share.max_downloads && (
+                              <span>Downloads: {share.download_count}/{share.max_downloads}</span>
+                            )}
+                            {!share.max_downloads && (
+                              <span>Downloads: {share.download_count}</span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        </div >
-      )}
+          </div >
+        )
+      }
     </div >
   );
 };

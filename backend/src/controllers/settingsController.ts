@@ -5,6 +5,13 @@ import UserModel from '../models/User';
 import SessionModel from '../models/Session';
 import NotificationPreferencesModel from '../models/NotificationPreferences';
 import { hashPassword, comparePassword } from '../utils/auth';
+import config from '../config';
+import { isS3Storage } from '../middleware/upload';
+import redis from '../utils/redis';
+
+const getUserKey = (userId: string) => `user:${userId}`;
+
+
 
 // Password Management
 export async function changePassword(req: Request, res: Response): Promise<void> {
@@ -42,6 +49,9 @@ export async function changePassword(req: Request, res: Response): Promise<void>
 
         // Update password
         await UserModel.changePassword(userId, newPasswordHash);
+
+        // Invalidate user cache
+        await redis.del(getUserKey(userId));
 
         res.status(200).json({ message: 'Password changed successfully' });
     } catch (error) {
@@ -167,6 +177,9 @@ export async function updateProfile(req: Request, res: Response): Promise<void> 
 
         const updatedUser = await UserModel.updateProfile(userId, updates);
 
+        // Invalidate user cache
+        await redis.del(getUserKey(userId));
+
         res.status(200).json({
             message: 'Profile updated successfully',
             user: UserModel.toResponse(updatedUser),
@@ -176,6 +189,59 @@ export async function updateProfile(req: Request, res: Response): Promise<void> 
         res.status(500).json({ error: 'Failed to update profile' });
     }
 }
+
+// Avatar Upload
+export async function uploadAvatar(req: Request, res: Response): Promise<void> {
+    try {
+        const userId = (req as any).user.userId;
+        const file = req.file;
+
+        if (!file) {
+            res.status(400).json({ error: 'No file uploaded' });
+            return;
+        }
+
+        // Validate file type
+        const allowedMimeTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+        if (!allowedMimeTypes.includes(file.mimetype)) {
+            res.status(400).json({ error: 'Invalid file type. Only images are allowed (jpg, png, gif, webp)' });
+            return;
+        }
+
+        // Validate file size (5MB max for avatars)
+        const maxSize = 5 * 1024 * 1024; // 5MB
+        if (file.size > maxSize) {
+            res.status(400).json({ error: 'File too large. Maximum size is 5MB' });
+            return;
+        }
+
+        // Construct avatar URL
+        let avatarUrl: string;
+        if (isS3Storage) {
+            // For S3, the file.key contains the S3 key
+            avatarUrl = `https://${config.aws.s3BucketName}.s3.${config.aws.region}.amazonaws.com/${(file as any).key}`;
+        } else {
+            // For local storage, construct URL from filename
+            avatarUrl = `${config.apiUrl}/uploads/${file.filename}`;
+        }
+
+        // Update user's avatar_url
+        const updatedUser = await UserModel.updateProfile(userId, { avatar_url: avatarUrl });
+
+        // Invalidate user cache
+        await redis.del(getUserKey(userId));
+
+        res.status(200).json({
+            message: 'Avatar uploaded successfully',
+            user: UserModel.toResponse(updatedUser),
+            avatarUrl,
+        });
+    } catch (error) {
+        console.error('Upload avatar error:', error);
+        res.status(500).json({ error: 'Failed to upload avatar' });
+    }
+}
+
 
 // Session Management
 export async function getActiveSessions(req: Request, res: Response): Promise<void> {
@@ -289,6 +355,9 @@ export async function updatePrivacySettings(req: Request, res: Response): Promis
         if (data_collection !== undefined) updates.data_collection = data_collection;
 
         await UserModel.updateProfile(userId, updates);
+
+        // Invalidate user cache
+        await redis.del(getUserKey(userId));
 
         res.status(200).json({ message: 'Privacy settings updated successfully' });
     } catch (error) {

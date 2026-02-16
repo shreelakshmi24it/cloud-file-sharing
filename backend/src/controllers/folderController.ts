@@ -2,6 +2,17 @@ import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import FolderModel from '../models/Folder';
 import FileModel from '../models/File';
+import redis from '../utils/redis';
+
+const CACHE_TTL_SECONDS = 300; // 5 minutes
+
+// Helper to generate cache keys
+const getFolderListKey = (userId: string, parentId: string | null) =>
+    `folders:list:${userId}:${parentId || 'root'}`;
+
+const getFolderContentKey = (userId: string, folderId: string | null) =>
+    `folders:content:${userId}:${folderId || 'root'}`;
+
 
 export async function createFolder(req: AuthRequest, res: Response): Promise<void> {
     try {
@@ -32,6 +43,13 @@ export async function createFolder(req: AuthRequest, res: Response): Promise<voi
             parent_folder_id: parent_folder_id || undefined,
         });
 
+        // Invalidate cache for parent folder
+        const parentId = parent_folder_id || null;
+        await Promise.all([
+            redis.del(getFolderListKey(userId, parentId)),
+            redis.del(getFolderContentKey(userId, parentId))
+        ]);
+
         res.status(201).json({
             message: 'Folder created successfully',
             folder: FolderModel.toResponse(folder),
@@ -47,18 +65,32 @@ export async function getFolders(req: AuthRequest, res: Response): Promise<void>
         const userId = req.user!.userId;
         const { parent_id } = req.query;
 
+        const parentFolderId = parent_id === '' || parent_id === 'null' || parent_id === undefined ? null : parent_id as string;
+        const cacheKey = getFolderListKey(userId, parentFolderId);
+
+        // Try to get from cache
+        const cachedFolders = await redis.getCachedObject<any[]>(cacheKey);
+        if (cachedFolders) {
+            res.status(200).json({ folders: cachedFolders });
+            return;
+        }
+
         let folders;
         if (parent_id !== undefined) {
             // Get folders in a specific parent (or root if parent_id is null/empty)
-            const parentFolderId = parent_id === '' || parent_id === 'null' ? null : parent_id as string;
             folders = await FolderModel.findByParentId(parentFolderId, userId);
         } else {
             // Get all folders for the user
             folders = await FolderModel.findByUserId(userId);
         }
 
+        const responseFolders = folders.map(folder => FolderModel.toResponse(folder));
+
+        // Cache the result
+        await redis.cacheObject(cacheKey, responseFolders, CACHE_TTL_SECONDS);
+
         res.status(200).json({
-            folders: folders.map(folder => FolderModel.toResponse(folder)),
+            folders: responseFolders,
         });
     } catch (error) {
         console.error('Get folders error:', error);
@@ -113,16 +145,30 @@ export async function getFolderContents(req: AuthRequest, res: Response): Promis
             }
         }
 
+        const cacheKey = getFolderContentKey(userId, folderId);
+
+        // Try to get from cache
+        const cachedContent = await redis.getCachedObject<any>(cacheKey);
+        if (cachedContent) {
+            res.status(200).json(cachedContent);
+            return;
+        }
+
         // Get subfolders
         const folders = await FolderModel.findByParentId(folderId, userId);
 
         // Get files in this folder
         const files = await FileModel.findByFolderId(folderId, userId);
 
-        res.status(200).json({
+        const response = {
             folders: folders.map(folder => FolderModel.toResponse(folder)),
             files: files.map(file => FileModel.toResponse(file)),
-        });
+        };
+
+        // Cache the result
+        await redis.cacheObject(cacheKey, response, CACHE_TTL_SECONDS);
+
+        res.status(200).json(response);
     } catch (error) {
         console.error('Get folder contents error:', error);
         res.status(500).json({ error: 'Failed to retrieve folder contents' });
@@ -201,6 +247,19 @@ export async function updateFolder(req: AuthRequest, res: Response): Promise<voi
 
         const updatedFolder = await FolderModel.update(id, updates);
 
+        // Invalidate old parent cache
+        const oldParentId = folder.parent_folder_id || null;
+
+        // Invalidate new parent cache (if moved)
+        const newParentId = parent_folder_id === undefined ? oldParentId : (parent_folder_id || null);
+
+        await Promise.all([
+            redis.del(getFolderListKey(userId, oldParentId)),
+            redis.del(getFolderContentKey(userId, oldParentId)),
+            redis.del(getFolderListKey(userId, newParentId)),
+            redis.del(getFolderContentKey(userId, newParentId))
+        ]);
+
         res.status(200).json({
             message: 'Folder updated successfully',
             folder: FolderModel.toResponse(updatedFolder),
@@ -250,6 +309,13 @@ export async function deleteFolder(req: AuthRequest, res: Response): Promise<voi
             const UserModel = require('../models/User').default;
             await UserModel.updateStorageUsed(userId, -totalSize);
         }
+
+        // Invalidate parent cache
+        const parentId = folder.parent_folder_id || null;
+        await Promise.all([
+            redis.del(getFolderListKey(userId, parentId)),
+            redis.del(getFolderContentKey(userId, parentId))
+        ]);
 
         res.status(200).json({
             message: 'Folder deleted successfully',

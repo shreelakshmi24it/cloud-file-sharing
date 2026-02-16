@@ -2,6 +2,7 @@ import config from '../config';
 import { GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { s3Client, isS3Storage } from '../middleware/upload';
+import redis from '../utils/redis';
 
 import { Request, Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
@@ -11,6 +12,9 @@ import { generateShareToken } from '../utils/shareToken';
 import { hashPassword, comparePassword } from '../utils/auth';
 import crypto from 'crypto';
 import fs from 'fs';
+
+const getShareKey = (token: string) => `share:${token}`;
+
 
 export async function createShare(req: AuthRequest, res: Response): Promise<void> {
     try {
@@ -68,12 +72,22 @@ export async function createShare(req: AuthRequest, res: Response): Promise<void
 export async function getShare(req: Request, res: Response): Promise<void> {
     try {
         const { token } = req.params;
+        const cacheKey = getShareKey(token);
 
-        const share = await ShareModel.findByToken(token);
+        let share = await redis.getCachedObject<any>(cacheKey);
+
+        if (!share) {
+            share = await ShareModel.findByToken(token);
+            if (share) {
+                await redis.cacheObject(cacheKey, share, 300);
+            }
+        }
+
         if (!share) {
             res.status(404).json({ error: 'Share link not found' });
             return;
         }
+
 
         // Check if expired
         if (ShareModel.isExpired(share)) {
@@ -92,6 +106,32 @@ export async function getShare(req: Request, res: Response): Promise<void> {
         if (!file) {
             res.status(404).json({ error: 'File not found' });
             return;
+        }
+
+        // Check if share is specific to an email
+        if (share.shared_with_email) {
+            // Check for auth header
+            const authHeader = req.headers.authorization;
+            if (!authHeader || !authHeader.startsWith('Bearer ')) {
+                res.status(401).json({ error: 'Authentication required to access this share' });
+                return;
+            }
+
+            try {
+                // Verify token and email
+                const token = authHeader.substring(7);
+                // Dynamically import to avoid circular dependencies if any, or just use the imported verifyToken
+                const { verifyToken } = require('../utils/auth');
+                const payload = verifyToken(token);
+
+                if (payload.email !== share.shared_with_email) {
+                    res.status(403).json({ error: 'Access denied: This file is not shared with your account' });
+                    return;
+                }
+            } catch (err) {
+                res.status(401).json({ error: 'Invalid or expired session' });
+                return;
+            }
         }
 
         res.status(200).json({
@@ -116,12 +156,22 @@ export async function validateShare(req: Request, res: Response): Promise<void> 
     try {
         const { token } = req.params;
         const { password } = req.body;
+        const cacheKey = getShareKey(token);
 
-        const share = await ShareModel.findByToken(token);
+        let share = await redis.getCachedObject<any>(cacheKey);
+
+        if (!share) {
+            share = await ShareModel.findByToken(token);
+            if (share) {
+                await redis.cacheObject(cacheKey, share, 300);
+            }
+        }
+
         if (!share) {
             res.status(404).json({ error: 'Share link not found' });
             return;
         }
+
 
         // Check if password is required
         if (!share.password_hash) {
@@ -152,12 +202,22 @@ export async function downloadSharedFile(req: Request, res: Response): Promise<v
     try {
         const { token } = req.params;
         const { password } = req.query;
+        const cacheKey = getShareKey(token);
 
-        const share = await ShareModel.findByToken(token);
+        let share = await redis.getCachedObject<any>(cacheKey);
+
+        if (!share) {
+            share = await ShareModel.findByToken(token);
+            if (share) {
+                await redis.cacheObject(cacheKey, share, 300);
+            }
+        }
+
         if (!share) {
             res.status(404).json({ error: 'Share link not found' });
             return;
         }
+
 
         // Check if expired
         if (ShareModel.isExpired(share)) {
@@ -192,6 +252,31 @@ export async function downloadSharedFile(req: Request, res: Response): Promise<v
             return;
         }
 
+        // Check if share is specific to an email
+        if (share.shared_with_email) {
+            // Check for auth header
+            const authHeader = req.headers.authorization;
+            if (!authHeader || !authHeader.startsWith('Bearer ')) {
+                res.status(401).json({ error: 'Authentication required' });
+                return;
+            }
+
+            try {
+                // Verify token and email
+                const token = authHeader.substring(7);
+                const { verifyToken } = require('../utils/auth');
+                const payload = verifyToken(token);
+
+                if (payload.email !== share.shared_with_email) {
+                    res.status(403).json({ error: 'Access denied' });
+                    return;
+                }
+            } catch (err) {
+                res.status(401).json({ error: 'Invalid or expired session' });
+                return;
+            }
+        }
+
         if (isS3Storage && s3Client) {
             // Generate Presigned URL for direct download
             try {
@@ -203,6 +288,12 @@ export async function downloadSharedFile(req: Request, res: Response): Promise<v
                 });
 
                 const signedUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
+
+                // Increment download count before returning URL
+                await ShareModel.incrementDownloadCount(share.id);
+                // Invalidate cache
+                await redis.del(cacheKey);
+
 
                 // Return Presigned URL to client
                 res.status(200).json({ downloadUrl: signedUrl });
@@ -220,6 +311,12 @@ export async function downloadSharedFile(req: Request, res: Response): Promise<v
                 res.status(404).json({ error: 'File not found on storage' });
                 return;
             }
+
+            // Increment download count before streaming file
+            await ShareModel.incrementDownloadCount(share.id);
+            // Invalidate cache
+            await redis.del(cacheKey);
+
 
             res.setHeader('Content-Type', file.mime_type);
             res.setHeader('Content-Disposition', `attachment; filename="${file.original_name}"`);
@@ -286,6 +383,9 @@ export async function deleteShare(req: AuthRequest, res: Response): Promise<void
         // Delete share
         await ShareModel.delete(share.id);
 
+        // Invalidate cache
+        await redis.del(getShareKey(share.share_token));
+
         res.status(200).json({
             message: 'Share deleted successfully',
         });
@@ -293,6 +393,7 @@ export async function deleteShare(req: AuthRequest, res: Response): Promise<void
         console.error('Delete share error:', error);
         res.status(500).json({ error: 'Failed to delete share' });
     }
+
 }
 
 export async function getSharedWithMe(req: AuthRequest, res: Response): Promise<void> {

@@ -10,11 +10,15 @@ import fileRoutes from './routes/files';
 import shareRoutes from './routes/share';
 import folderRoutes from './routes/folders';
 import settingsRoutes from './routes/settings';
+import limiter from './middleware/rateLimit';
 
 const app: Application = express();
 
+
 // Security middleware
 app.use(helmet());
+app.use(limiter);
+
 
 // CORS configuration
 app.use(cors({

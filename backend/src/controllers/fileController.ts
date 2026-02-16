@@ -8,6 +8,14 @@ import { GetObjectCommand, DeleteObjectCommand, HeadObjectCommand } from '@aws-s
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { s3Client, isS3Storage } from '../middleware/upload';
 import config from '../config';
+import redis from '../utils/redis';
+
+// Helper to generate cache keys
+const getFolderContentKey = (userId: string, folderId: string | null) =>
+    `folders:content:${userId}:${folderId || 'root'}`;
+
+const getFileKey = (fileId: string) => `file:${fileId}`;
+
 
 export async function uploadFile(req: AuthRequest, res: Response): Promise<void> {
     try {
@@ -62,6 +70,9 @@ export async function uploadFile(req: AuthRequest, res: Response): Promise<void>
         // Update user's storage usage
         await UserModel.updateStorageUsed(userId, fileSize);
 
+        // Invalidate folder content cache
+        await redis.del(getFolderContentKey(userId, folder_id || null));
+
         res.status(201).json({
             message: 'File uploaded successfully',
             file: FileModel.toResponse(file),
@@ -91,6 +102,39 @@ export async function getFileById(req: AuthRequest, res: Response): Promise<void
         const { id } = req.params;
         const userId = req.user!.userId;
 
+        const cacheKey = getFileKey(id);
+
+        // Try to get from cache
+        const cachedFile = await redis.getCachedObject<any>(cacheKey);
+        if (cachedFile) {
+            // security check: verify user owns the file (cache should store user_id or we trust the key availability if properly scoped)
+            // Ideally cache key should be file:{fileId} and we check user_id inside.
+            // But if we cache the *response* (which doesn't include user_id usually), we might need to be careful.
+            // FileModel.toResponse result:
+            /*
+            {
+                id: file.id,
+                name: file.name,
+                ...
+                // It does NOT include user_id usually in public response
+            }
+            */
+            // However, getFileById checks file.user_id vs req.userId.
+            // To be safe, let's cache the raw file model or include user_id in cache.
+            // Or better: valid cache means valid file, but we need to ensure *ownership*.
+            // If I cache `file:{fileId}`, anyone requesting that ID gets the cached object.
+            // I must verify ownership.
+            // So caching the *response* is risky if I can't verify ownership.
+
+            // Let's cache the full file object (DB model) instead of response, so I can check user_id.
+            if (cachedFile.user_id === userId) {
+                res.status(200).json({
+                    file: FileModel.toResponse(cachedFile),
+                });
+                return;
+            }
+        }
+
         const file = await FileModel.findById(id);
 
         if (!file) {
@@ -103,6 +147,9 @@ export async function getFileById(req: AuthRequest, res: Response): Promise<void
             res.status(403).json({ error: 'Access denied' });
             return;
         }
+
+        // Cache the full file object
+        await redis.cacheObject(cacheKey, file, 300);
 
         res.status(200).json({
             file: FileModel.toResponse(file),
@@ -220,6 +267,12 @@ export async function deleteFile(req: AuthRequest, res: Response): Promise<void>
         // Update user's storage usage
         await UserModel.updateStorageUsed(userId, -file.size);
 
+        // Invalidate folder content cache
+        await redis.del(getFolderContentKey(userId, file.folder_id || null));
+
+        // Invalidate file cache
+        await redis.del(getFileKey(id));
+
         res.status(200).json({
             message: 'File deleted successfully',
         });
@@ -250,6 +303,16 @@ export async function moveFile(req: AuthRequest, res: Response): Promise<void> {
 
         // Move file to folder
         const updatedFile = await FileModel.moveToFolder(id, folder_id || null);
+
+        // Invalidate old and new folder content cache
+        const oldFolderId = file.folder_id || null;
+        const newFolderId = folder_id || null;
+
+        await Promise.all([
+            redis.del(getFolderContentKey(userId, oldFolderId)),
+            redis.del(getFolderContentKey(userId, newFolderId)),
+            redis.del(getFileKey(id))
+        ]);
 
         res.status(200).json({
             message: 'File moved successfully',

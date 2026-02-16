@@ -1,5 +1,5 @@
-import app from './app';
 import config from './config';
+
 import db from './database/connection';
 import redis from './utils/redis';
 
@@ -23,7 +23,9 @@ async function startServer() {
         }
 
         // Start Express server
+        const app = (await import('./app')).default;
         const server = app.listen(PORT, '0.0.0.0', () => {
+
             console.log(`
 ╔═══════════════════════════════════════════════════════════╗
 ║                                                           ║

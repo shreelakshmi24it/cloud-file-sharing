@@ -3,6 +3,10 @@ import UserModel from '../models/User';
 import { hashPassword, comparePassword, generateToken, generateRefreshToken } from '../utils/auth';
 import { validate, registerSchema, loginSchema, AuthenticationError } from '../utils/validation';
 import speakeasy from 'speakeasy';
+import redis from '../utils/redis';
+
+const getUserKey = (userId: string) => `user:${userId}`;
+
 
 export async function register(req: Request, res: Response): Promise<void> {
     try {
@@ -167,12 +171,25 @@ export async function logout(_req: Request, res: Response): Promise<void> {
 export async function getProfile(req: Request, res: Response): Promise<void> {
     try {
         const userId = (req as any).user.userId;
+        const cacheKey = getUserKey(userId);
+
+        // Try to get from cache
+        const cachedUser = await redis.getCachedObject<any>(cacheKey);
+        if (cachedUser) {
+            res.status(200).json({
+                user: UserModel.toResponse(cachedUser),
+            });
+            return;
+        }
 
         const user = await UserModel.findById(userId);
         if (!user) {
             res.status(404).json({ error: 'User not found' });
             return;
         }
+
+        // Cache the user object
+        await redis.cacheObject(cacheKey, user, 300);
 
         res.status(200).json({
             user: UserModel.toResponse(user),

@@ -13,18 +13,18 @@ import {
     Save,
     Eye,
     EyeOff,
-    Camera,
     Mail,
     Phone,
     Globe,
-    Key,
     Download,
     AlertTriangle,
     CheckCircle,
     X
 } from 'lucide-react';
 
+
 type TabType = 'profile' | 'security' | 'notifications' | 'storage' | 'privacy';
+
 
 const SettingsPage = () => {
     const navigate = useNavigate();
@@ -58,7 +58,7 @@ const SettingsPage = () => {
     });
     const [twoFactorSetup, setTwoFactorSetup] = useState<{ secret: string; qrCode: string } | null>(null);
     const [twoFactorToken, setTwoFactorToken] = useState('');
-    const [activeSessions, setActiveSessions] = useState<any[]>([]);
+
 
     // Notification settings
     const [notificationSettings, setNotificationSettings] = useState({
@@ -96,10 +96,7 @@ const SettingsPage = () => {
                 setPrivacySettings(privacyData.privacy);
             }
 
-            // Load active sessions if on security tab
-            if (activeTab === 'security') {
-                await loadActiveSessions();
-            }
+
 
             // Update profile data from user
             if (user) {
@@ -122,14 +119,14 @@ const SettingsPage = () => {
         }
     };
 
-    const loadActiveSessions = async () => {
-        try {
-            const sessionsData = await settingsService.getActiveSessions();
-            setActiveSessions(sessionsData.sessions || []);
-        } catch (err: any) {
-            console.error('Failed to load sessions:', err);
-        }
-    };
+    // const loadActiveSessions = async () => { // This function is no longer needed if activeSessions state is removed
+    //     try {
+    //         const sessionsData = await settingsService.getActiveSessions();
+    //         setActiveSessions(sessionsData.sessions || []);
+    //     } catch (err: any) {
+    //         console.error('Failed to load sessions:', err);
+    //     }
+    // };
 
     const handleProfileSave = async () => {
         try {
@@ -252,17 +249,7 @@ const SettingsPage = () => {
         }
     };
 
-    const handleRevokeSession = async (sessionId: string) => {
-        try {
-            setError('');
-            await settingsService.revokeSession(sessionId);
-            await loadActiveSessions();
-            setSaveSuccess(true);
-            setTimeout(() => setSaveSuccess(false), 3000);
-        } catch (err: any) {
-            setError(err.response?.data?.error || 'Failed to revoke session');
-        }
-    };
+
 
     const handleNotificationSave = async () => {
         try {
@@ -481,20 +468,12 @@ const SettingsPage = () => {
 
                                     {/* Profile Photo */}
                                     <div className="flex items-center space-x-6">
-                                        <div className="relative">
-                                            <div className="h-24 w-24 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-3xl font-bold">
-                                                {user?.name?.charAt(0).toUpperCase()}
-                                            </div>
-                                            <button className="absolute bottom-0 right-0 bg-blue-600 p-2 rounded-full text-white hover:bg-blue-700 transition">
-                                                <Camera className="h-4 w-4" />
-                                            </button>
+                                        <div className="h-24 w-24 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-3xl font-bold">
+                                            {user?.name?.charAt(0).toUpperCase()}
                                         </div>
                                         <div>
                                             <h3 className="font-medium text-gray-900">{user?.name}</h3>
                                             <p className="text-sm text-gray-600">{user?.email}</p>
-                                            <button className="mt-2 text-sm text-blue-600 hover:text-blue-700">
-                                                Change Photo
-                                            </button>
                                         </div>
                                     </div>
 
@@ -705,50 +684,7 @@ const SettingsPage = () => {
                                         </div>
                                     </div>
 
-                                    {/* Active Sessions */}
-                                    <div>
-                                        <h3 className="text-lg font-medium text-gray-900 mb-4">Active Sessions</h3>
-                                        <div className="space-y-3">
-                                            {activeSessions.length === 0 ? (
-                                                <div className="border border-gray-200 rounded-lg p-4 text-center text-gray-500">
-                                                    No active sessions found
-                                                </div>
-                                            ) : (
-                                                activeSessions.map((session) => (
-                                                    <div key={session.id} className="border border-gray-200 rounded-lg p-4">
-                                                        <div className="flex items-center justify-between">
-                                                            <div className="flex items-center space-x-3">
-                                                                <div className={`h-10 w-10 ${session.is_current ? 'bg-green-100' : 'bg-gray-100'} rounded-lg flex items-center justify-center`}>
-                                                                    <Key className={`h-5 w-5 ${session.is_current ? 'text-green-600' : 'text-gray-600'}`} />
-                                                                </div>
-                                                                <div>
-                                                                    <p className="font-medium text-gray-900">
-                                                                        {session.is_current ? 'Current Session' : (session.device_name || 'Unknown Device')}
-                                                                    </p>
-                                                                    <p className="text-sm text-gray-600">
-                                                                        {session.browser && session.os ? `${session.browser} on ${session.os}` : 'Browser'} • {session.location || 'Unknown location'}
-                                                                    </p>
-                                                                    <p className="text-xs text-gray-500">
-                                                                        Last active: {new Date(session.last_active).toLocaleString()}
-                                                                    </p>
-                                                                </div>
-                                                            </div>
-                                                            {session.is_current ? (
-                                                                <span className="text-xs text-green-600 bg-green-50 px-3 py-1 rounded-full">Active</span>
-                                                            ) : (
-                                                                <button
-                                                                    onClick={() => handleRevokeSession(session.id)}
-                                                                    className="text-sm text-red-600 hover:text-red-700 font-medium"
-                                                                >
-                                                                    Revoke
-                                                                </button>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                ))
-                                            )}
-                                        </div>
-                                    </div>
+
 
                                     {/* 2FA Setup Modal */}
                                     {twoFactorSetup && (
