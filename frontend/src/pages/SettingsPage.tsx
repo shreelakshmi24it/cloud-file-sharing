@@ -6,8 +6,6 @@ import {
     ArrowLeft,
     User,
     Lock,
-    Bell,
-    Shield,
     HardDrive,
     Trash2,
     Save,
@@ -23,7 +21,7 @@ import {
 } from 'lucide-react';
 
 
-type TabType = 'profile' | 'security' | 'notifications' | 'storage' | 'privacy';
+type TabType = 'profile' | 'security' | 'storage';
 
 
 const SettingsPage = () => {
@@ -60,21 +58,7 @@ const SettingsPage = () => {
     const [twoFactorToken, setTwoFactorToken] = useState('');
 
 
-    // Notification settings
-    const [notificationSettings, setNotificationSettings] = useState({
-        email_notifications: true,
-        file_shared_notifications: true,
-        storage_alerts: true,
-        security_alerts: true,
-        weekly_reports: false,
-    });
 
-    // Privacy settings
-    const [privacySettings, setPrivacySettings] = useState({
-        profile_visibility: 'private',
-        activity_tracking: true,
-        data_collection: true,
-    });
 
     // Load data on mount
     useEffect(() => {
@@ -84,17 +68,7 @@ const SettingsPage = () => {
     const loadSettingsData = async () => {
         try {
             setLoading(true);
-            // Load notification preferences
-            const notifPrefs = await settingsService.getNotificationPreferences();
-            if (notifPrefs.preferences) {
-                setNotificationSettings(notifPrefs.preferences);
-            }
 
-            // Load privacy settings
-            const privacyData = await settingsService.getPrivacySettings();
-            if (privacyData.privacy) {
-                setPrivacySettings(privacyData.privacy);
-            }
 
 
 
@@ -251,39 +225,7 @@ const SettingsPage = () => {
 
 
 
-    const handleNotificationSave = async () => {
-        try {
-            setIsSaving(true);
-            setError('');
-            setSaveSuccess(false);
 
-            await settingsService.updateNotificationPreferences(notificationSettings);
-
-            setIsSaving(false);
-            setSaveSuccess(true);
-            setTimeout(() => setSaveSuccess(false), 3000);
-        } catch (err: any) {
-            setError(err.response?.data?.error || 'Failed to update notifications');
-            setIsSaving(false);
-        }
-    };
-
-    const handlePrivacySave = async () => {
-        try {
-            setIsSaving(true);
-            setError('');
-            setSaveSuccess(false);
-
-            await settingsService.updatePrivacySettings(privacySettings);
-
-            setIsSaving(false);
-            setSaveSuccess(true);
-            setTimeout(() => setSaveSuccess(false), 3000);
-        } catch (err: any) {
-            setError(err.response?.data?.error || 'Failed to update privacy settings');
-            setIsSaving(false);
-        }
-    };
 
     const handleDeleteAccount = async () => {
         const confirmText = prompt(
@@ -373,25 +315,11 @@ const SettingsPage = () => {
                                     <span className="font-medium text-sm">Security</span>
                                 </button>
                                 <button
-                                    onClick={() => setActiveTab('notifications')}
-                                    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition whitespace-nowrap touch-manipulation ${activeTab === 'notifications' ? 'bg-blue-50 text-blue-600' : 'text-gray-700 hover:bg-gray-50'}`}
-                                >
-                                    <Bell className="h-4 w-4" />
-                                    <span className="font-medium text-sm">Notifications</span>
-                                </button>
-                                <button
                                     onClick={() => setActiveTab('storage')}
                                     className={`flex items-center gap-2 px-4 py-2 rounded-lg transition whitespace-nowrap touch-manipulation ${activeTab === 'storage' ? 'bg-blue-50 text-blue-600' : 'text-gray-700 hover:bg-gray-50'}`}
                                 >
                                     <HardDrive className="h-4 w-4" />
                                     <span className="font-medium text-sm">Storage</span>
-                                </button>
-                                <button
-                                    onClick={() => setActiveTab('privacy')}
-                                    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition whitespace-nowrap touch-manipulation ${activeTab === 'privacy' ? 'bg-blue-50 text-blue-600' : 'text-gray-700 hover:bg-gray-50'}`}
-                                >
-                                    <Shield className="h-4 w-4" />
-                                    <span className="font-medium text-sm">Privacy</span>
                                 </button>
                             </div>
                         </div>
@@ -421,17 +349,6 @@ const SettingsPage = () => {
                             </button>
 
                             <button
-                                onClick={() => setActiveTab('notifications')}
-                                className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition ${activeTab === 'notifications'
-                                    ? 'bg-blue-50 text-blue-600'
-                                    : 'text-gray-700 hover:bg-gray-50'
-                                    }`}
-                            >
-                                <Bell className="h-5 w-5" />
-                                <span className="font-medium">Notifications</span>
-                            </button>
-
-                            <button
                                 onClick={() => setActiveTab('storage')}
                                 className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition ${activeTab === 'storage'
                                     ? 'bg-blue-50 text-blue-600'
@@ -440,17 +357,6 @@ const SettingsPage = () => {
                             >
                                 <HardDrive className="h-5 w-5" />
                                 <span className="font-medium">Storage</span>
-                            </button>
-
-                            <button
-                                onClick={() => setActiveTab('privacy')}
-                                className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition ${activeTab === 'privacy'
-                                    ? 'bg-blue-50 text-blue-600'
-                                    : 'text-gray-700 hover:bg-gray-50'
-                                    }`}
-                            >
-                                <Shield className="h-5 w-5" />
-                                <span className="font-medium">Privacy</span>
                             </button>
                         </div>
                     </div>
@@ -733,69 +639,26 @@ const SettingsPage = () => {
                                             </div>
                                         </div>
                                     )}
-                                </div>
-                            )}
-
-                            {/* Notifications Tab */}
-                            {activeTab === 'notifications' && (
-                                <div className="space-y-6">
-                                    <div>
-                                        <h2 className="text-xl font-semibold text-gray-900 mb-4">Notification Preferences</h2>
-                                        <p className="text-sm text-gray-600 mb-6">Manage how you receive notifications.</p>
-                                    </div>
-
-                                    <div className="space-y-4">
-                                        {Object.entries({
-                                            email_notifications: {
-                                                title: 'Email Notifications',
-                                                description: 'Receive email notifications for important updates'
-                                            },
-                                            file_shared_notifications: {
-                                                title: 'File Shared Notifications',
-                                                description: 'Get notified when someone shares a file with you'
-                                            },
-                                            storage_alerts: {
-                                                title: 'Storage Alerts',
-                                                description: 'Alerts when your storage is running low'
-                                            },
-                                            security_alerts: {
-                                                title: 'Security Alerts',
-                                                description: 'Important security and account notifications'
-                                            },
-                                            weekly_reports: {
-                                                title: 'Weekly Reports',
-                                                description: 'Weekly summary of your account activity'
-                                            }
-                                        }).map(([key, { title, description }]) => (
-                                            <div key={key} className="flex items-center justify-between py-3 border-b">
-                                                <div>
-                                                    <h3 className="font-medium text-gray-900">{title}</h3>
-                                                    <p className="text-sm text-gray-600">{description}</p>
+                                    {/* Danger Zone - Moved from Privacy */}
+                                    <div className="border-t pt-6 mt-8">
+                                        <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+                                            <div className="flex items-start space-x-3">
+                                                <AlertTriangle className="h-6 w-6 text-red-600 flex-shrink-0 mt-0.5" />
+                                                <div className="flex-1">
+                                                    <h3 className="text-lg font-semibold text-red-900 mb-2">Danger Zone</h3>
+                                                    <p className="text-sm text-red-700 mb-4">
+                                                        Once you delete your account, there is no going back. Please be certain.
+                                                    </p>
+                                                    <button
+                                                        onClick={handleDeleteAccount}
+                                                        className="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 transition"
+                                                    >
+                                                        Delete Account
+                                                    </button>
                                                 </div>
-                                                <label className="relative inline-flex items-center cursor-pointer">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={notificationSettings[key as keyof typeof notificationSettings]}
-                                                        onChange={(e) => setNotificationSettings({
-                                                            ...notificationSettings,
-                                                            [key]: e.target.checked
-                                                        })}
-                                                        className="sr-only peer"
-                                                    />
-                                                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                                                </label>
                                             </div>
-                                        ))}
+                                        </div>
                                     </div>
-
-                                    <button
-                                        onClick={handleNotificationSave}
-                                        disabled={isSaving}
-                                        className="flex items-center space-x-2 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
-                                    >
-                                        <Save className="h-5 w-5" />
-                                        <span>{isSaving ? 'Saving...' : 'Save Preferences'}</span>
-                                    </button>
                                 </div>
                             )}
 
@@ -861,106 +724,11 @@ const SettingsPage = () => {
                                 </div>
                             )}
 
-                            {/* Privacy Tab */}
-                            {activeTab === 'privacy' && (
-                                <div className="space-y-6">
-                                    <div>
-                                        <h2 className="text-xl font-semibold text-gray-900 mb-4">Privacy Settings</h2>
-                                        <p className="text-sm text-gray-600 mb-6">Control your privacy and data preferences.</p>
-                                    </div>
-
-                                    <div className="space-y-4">
-                                        <div className="border-b pb-4">
-                                            <div className="flex items-center justify-between">
-                                                <div>
-                                                    <h3 className="font-medium text-gray-900">Profile Visibility</h3>
-                                                    <p className="text-sm text-gray-600">Control who can see your profile</p>
-                                                </div>
-                                                <select
-                                                    value={privacySettings.profile_visibility}
-                                                    onChange={(e) => setPrivacySettings({ ...privacySettings, profile_visibility: e.target.value })}
-                                                    className="border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                                >
-                                                    <option value="public">Public</option>
-                                                    <option value="private">Private</option>
-                                                    <option value="contacts">Contacts Only</option>
-                                                </select>
-                                            </div>
-                                        </div>
-
-                                        <div className="border-b pb-4">
-                                            <div className="flex items-center justify-between">
-                                                <div>
-                                                    <h3 className="font-medium text-gray-900">Activity Tracking</h3>
-                                                    <p className="text-sm text-gray-600">Allow us to track your activity for analytics</p>
-                                                </div>
-                                                <label className="relative inline-flex items-center cursor-pointer">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={privacySettings.activity_tracking}
-                                                        onChange={(e) => setPrivacySettings({ ...privacySettings, activity_tracking: e.target.checked })}
-                                                        className="sr-only peer"
-                                                    />
-                                                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                                                </label>
-                                            </div>
-                                        </div>
-
-                                        <div className="border-b pb-4">
-                                            <div className="flex items-center justify-between">
-                                                <div>
-                                                    <h3 className="font-medium text-gray-900">Data Collection</h3>
-                                                    <p className="text-sm text-gray-600">Allow us to collect data to improve our services</p>
-                                                </div>
-                                                <label className="relative inline-flex items-center cursor-pointer">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={privacySettings.data_collection}
-                                                        onChange={(e) => setPrivacySettings({ ...privacySettings, data_collection: e.target.checked })}
-                                                        className="sr-only peer"
-                                                    />
-                                                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                                                </label>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <button
-                                        onClick={handlePrivacySave}
-                                        disabled={isSaving}
-                                        className="flex items-center space-x-2 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
-                                    >
-                                        <Save className="h-5 w-5" />
-                                        <span>{isSaving ? 'Saving...' : 'Save Privacy Settings'}</span>
-                                    </button>
-
-                                    {/* Danger Zone */}
-                                    <div className="border-t pt-6 mt-8">
-                                        <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-                                            <div className="flex items-start space-x-3">
-                                                <AlertTriangle className="h-6 w-6 text-red-600 flex-shrink-0 mt-0.5" />
-                                                <div className="flex-1">
-                                                    <h3 className="text-lg font-semibold text-red-900 mb-2">Danger Zone</h3>
-                                                    <p className="text-sm text-red-700 mb-4">
-                                                        Once you delete your account, there is no going back. Please be certain.
-                                                    </p>
-                                                    <button
-                                                        onClick={handleDeleteAccount}
-                                                        className="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 transition"
-                                                    >
-                                                        Delete Account
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </div >
     );
 };
 
